@@ -26,4 +26,6 @@ Next, edit the `instagram.login()` line. I advise you to create a special accoun
 
 To finish, you can modify the schedule's time and hours in the `client.logged_in` if.
 
+**YOU MUST DOWNLOAD THE `BOT FOLDER` BECAUSE IT CONTAINS SOME IMPORTANT FILES**
+
 ## I hope you will find your happiness in my code !
