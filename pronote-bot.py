@@ -107,7 +107,7 @@ if client.logged_in:
 
     listOfLessons = client.lessons(datetime.date.today(), datetime.date.today() + datetime.timedelta(days=5))
     for lesson in listOfLessons:
-        if lesson.status == "Prof. absent" and lesson.subject.name + " " + lesson.start.strftime('Le %d/%m/%Y à %H:%M') not in canceled_lessons_already_published and lesson.teacher_name != "AMARAL-REVET R.":
+        if lesson.status == "Prof. absent" and lesson.subject.name + " " + lesson.start.strftime('Le %d/%m/%Y à %H:%M') not in canceled_lessons_already_published and lesson.teacher_name != "IF YOU WANT TO EXCLUDE SOME TEACHER OF THE CHECK":
             canceled_lessons_already_published.append(lesson.subject.name + " " + lesson.start.strftime('Le %d/%m/%Y à %H:%M'))
 
     print("PRONOTEBOT - Démarré le " + datetime.datetime.now().strftime("%d/%m/%Y à %Hh %Mm %Ss"))
