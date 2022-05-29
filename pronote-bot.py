@@ -1,51 +1,53 @@
 import pronotepy, schedule, time, datetime, re
-from pronotepy.ent import YOUR_ENT_HERE
+from pronotepy.ent import your_ent
 from instagrapi import Client
+from instagrapi.types import StoryMention
 from PIL import Image, ImageFont, ImageDraw
 
-client = pronotepy.Client('https://PRONOTE_URL_LIKE_THAT.index-education.net/pronote/eleve.html',
-                          username='YOUR_PRONOTE_USERNAME_HERE',
-                          password='AND_YOUR_PASSWORD',
-                          ent=YOUR_ENT_HERE)
+client = pronotepy.Client('https://pronoteurl.index-education.net/pronote/eleve.html',
+                          username='pronote id',
+                          password='pronote password',
+                          ent=your_ent if needed)
 instagram = Client()
-instagram.login("YOUR_INSTA_ACCOUNT_USERNAME_HERE", "AND_YOUR_INSTA_PASSWORD")
-thread = instagram.direct_threads(1)[0]
+instagram.login("insta id", "insta password")
+thread = insta_thread_id
 
 grades_already_published = []
 canceled_lessons_already_published = []
 
 def getIfThereIsANewNote():
     for grade in client.current_period.grades:
-        if grade.comment not in grades_already_published:
+        if grade.comment + " en " + grade.subject.name not in grades_already_published:
             instagram.direct_send("🆕 NOUVELLE NOTE 🆕\n" +
                 "\n➡️ " + grade.subject.name + " ⬅️"
                 + "\n" + grade.comment 
-                + "\n\nNote ➕ " + grade.max 
-                + "\nNote ➖ " + grade.min 
+                + "\n\nNote ➕ " + grade.max + "/" + grade.out_of
+                + "\nNote ➖ " + grade.min + "/" + grade.out_of
                 + "\nCoefficient ✖️ " + grade.coefficient
-                + "\nMoyenne de la classe ⭐ " + grade.average,
-                thread_ids=[thread.id])
+                + "\nMoyenne ⭐ " + grade.average,
+                thread_ids=[thread])
             print("NOUVELLE NOTE DÉTECTÉE : message envoyé !")
-            grades_already_published.append(grade.comment)
+            grades_already_published.append(grade.comment + " en " + grade.subject.name)
 
-    print("- Vérif. NN : " + datetime.datetime.now().strftime("%d/%m/%Y à %Hh %Mm %Ss"))
-    client.keep_alive()
+    print("-> Vérif. NN : " + datetime.datetime.now().strftime("%d/%m/%Y à %Hh %Mm %Ss"))
     
 def getIfThereIsAnAbsentProfessor():
     listOfLessons = client.lessons(datetime.date.today(), datetime.date.today() + datetime.timedelta(days=5))
     for lesson in listOfLessons:
-        if lesson.status == "Prof. absent" and lesson.subject.name + " " + lesson.start.strftime('Le %d/%m/%Y à %H:%M') not in canceled_lessons_already_published and lesson.teacher_name != "IF YOU WANT TO EXCLUDE SOME TEACHER OF THE CHECK":
+        if lesson.status == "Prof. absent" and lesson.subject.name + " " + lesson.start.strftime('Le %d/%m/%Y à %H:%M') not in canceled_lessons_already_published and lesson.teacher_name != "Teachers' names who you want to be excluded":
             instagram.direct_send("🚫 PROF. ABSENT 🚫\n" +
                 "\n➡️ " + lesson.subject.name + " ⬅️"
                 + "\n\n🧍 " + lesson.teacher_name
                 + "\n🔥 " + lesson.status
                 + "\n📅 " + lesson.start.strftime('Le %d/%m/%Y à %H:%M'),
-                thread_ids=[thread.id])
+                thread_ids=[thread])
             print("PROFESSEUR ABSENT DÉTECTÉ : message envoyé !")
             canceled_lessons_already_published.append(lesson.subject.name + " " + lesson.start.strftime('Le %d/%m/%Y à %H:%M'))
 
-    print("- Vérif. PA : " + datetime.datetime.now().strftime("%d/%m/%Y à %Hh %Mm %Ss"))
-    client.keep_alive()
+    print("-> Vérif. PA : " + datetime.datetime.now().strftime("%d/%m/%Y à %Hh %Mm %Ss"))
+    
+    if client.session_check():
+        print("-> PRONOTE SESSION RENEWED")
 
 def replacenth(string, sub, wanted, n):
         where = [m.start() for m in re.finditer(sub, string)][n - 1]
@@ -64,8 +66,12 @@ def check_spaces(string):
 
 def retrieveCanteenMenuInStory():
     todayMenu = client.menus(datetime.date.today(), datetime.date.today() + datetime.timedelta(days=1))
-    menu = []
 
+    if not todayMenu:
+        print("CANTINE : Jour férié, aucun menu publié !")
+        return
+
+    menu = []
     for starter in todayMenu[0].first_meal:
         menu.append(starter.name)
 
@@ -87,7 +93,7 @@ def retrieveCanteenMenuInStory():
     title_text = datetime.datetime.now().strftime("%d/%m/%Y")
     menu_text = ""
     for food in menu:
-        if(len(food) > 20):
+        if(len(food) > 19):
             modified = replacenth(food, " ", "\n", check_spaces(food))
             menu_text += "\n- " + modified
         else:
@@ -98,26 +104,27 @@ def retrieveCanteenMenuInStory():
     image_editable.text((35,630), menu_text, (255, 255, 255), font=menu_font)
     menu_image.save("bot/menu_results/" + datetime.datetime.now().strftime("%d%m%Y") + ".jpg")
 
-    instagram.photo_upload_to_story('bot/menu_results/' + datetime.datetime.now().strftime("%d%m%Y") + ".jpg")
-    print("CANTINE : menu du jour publié !")
+    instagram.photo_upload_to_story('bot/menu_results/' + datetime.datetime.now().strftime("%d%m%Y") + ".jpg",
+        mentions=[StoryMention(user=instagram.user_info_by_username('insta user you want to @ in the story'))])
+    print("CANTINE : Menu du jour publié !")
 
 if client.logged_in:
     for grade in client.current_period.grades:
-        grades_already_published.append(grade.comment)
+        grades_already_published.append(grade.comment + " en " + grade.subject.name)
 
     listOfLessons = client.lessons(datetime.date.today(), datetime.date.today() + datetime.timedelta(days=5))
     for lesson in listOfLessons:
-        if lesson.status == "Prof. absent" and lesson.subject.name + " " + lesson.start.strftime('Le %d/%m/%Y à %H:%M') not in canceled_lessons_already_published and lesson.teacher_name != "IF YOU WANT TO EXCLUDE SOME TEACHER OF THE CHECK":
+        if lesson.status == "Prof. absent" and lesson.subject.name + " " + lesson.start.strftime('Le %d/%m/%Y à %H:%M') not in canceled_lessons_already_published and lesson.teacher_name != "Teachers' names who you want to be excluded":
             canceled_lessons_already_published.append(lesson.subject.name + " " + lesson.start.strftime('Le %d/%m/%Y à %H:%M'))
 
     print("PRONOTEBOT - Démarré le " + datetime.datetime.now().strftime("%d/%m/%Y à %Hh %Mm %Ss"))
-    schedule.every(HERE_YOU_CAN_EDIT_THE_SCHEDULE).minutes.do(getIfThereIsANewNote)
-    schedule.every(AND_HERE_TOO_I_PRECISE_IN_MINUTES_BTW).minutes.do(getIfThereIsAnAbsentProfessor)
-    schedule.every().monday.at("THE HOUR SCHEDULE IN FORMAT HH:MM").do(retrieveCanteenMenuInStory)
-    schedule.every().tuesday.at("10:35").do(retrieveCanteenMenuInStory)
-    schedule.every().wednesday.at("LIKE THAT").do(retrieveCanteenMenuInStory)
-    schedule.every().thursday.at("DO YOU UNDERSTAND ?").do(retrieveCanteenMenuInStory)
-    schedule.every().friday.at("xd").do(retrieveCanteenMenuInStory)
+    schedule.every(15).minutes.do(getIfThereIsANewNote)
+    schedule.every(15).minutes.do(getIfThereIsAnAbsentProfessor)
+    schedule.every().monday.at("12:25").do(retrieveCanteenMenuInStory)
+    schedule.every().tuesday.at("12:25").do(retrieveCanteenMenuInStory)
+    schedule.every().wednesday.at("11:30").do(retrieveCanteenMenuInStory)
+    schedule.every().thursday.at("12:25").do(retrieveCanteenMenuInStory)
+    schedule.every().friday.at("11:30").do(retrieveCanteenMenuInStory)
 else:
     print("Un problème est survenu lors de la connexion à l'ENT.")
     exit()
